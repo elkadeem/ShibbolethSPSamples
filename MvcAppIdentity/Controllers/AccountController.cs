@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Security.Claims;
@@ -8,6 +9,7 @@ using System.Web.Mvc;
 using Microsoft.AspNet.Identity;
 using Microsoft.AspNet.Identity.Owin;
 using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.Cookies;
 using MvcAppIdentity.Models;
 
 namespace MvcAppIdentity.Controllers
@@ -57,8 +59,26 @@ namespace MvcAppIdentity.Controllers
         [AllowAnonymous]
         public ActionResult Login(string returnUrl)
         {
-            ViewBag.ReturnUrl = returnUrl;
-            return View();
+            ///var callbackUrl = Url.Action("ShibAuth", "Account", new { returnUrl = returnUrl }, protocol: Request.Url.Scheme);
+            return RedirectToAction("ShibAuth", "Account", new { returnUrl = returnUrl });
+            //ViewBag.ReturnUrl = returnUrl;
+            //return View();
+        }
+
+        [AllowAnonymous]
+        public ActionResult ShibAuth(string returnUrl)
+        {
+            var claims = new List<Claim>() { 
+                new Claim(ClaimTypes.Name, Request.ServerVariables["emailaddress"]?? ""),
+                new Claim(ClaimTypes.NameIdentifier, Request.ServerVariables["objectidentifier"]?? ""),
+                new Claim(ClaimTypes.GivenName, Request.ServerVariables["displayname"]?? ""),
+                new Claim("http://schemas.microsoft.com/accesscontrolservice/2010/07/claims/identityprovider", Request.ServerVariables["identityprovider"]?? ""),
+                
+            };
+
+            var claimsIdentity = new ClaimsIdentity(claims, DefaultAuthenticationTypes.ApplicationCookie);
+            HttpContext.GetOwinContext().Authentication.SignIn(claimsIdentity);
+            return RedirectToAction("Index", "Home");
         }
 
         //
